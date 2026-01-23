@@ -6,7 +6,8 @@ const {MessageMedia} = require("whatsapp-web.js")
 require("dotenv").config();
 
 const app = express();
-// Aumentamos el límite de tamaño para aceptar fotos grandes
+
+// Aumentamos el límite de tamaño para aceptar fotos grandes (IMPORTANTE)
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -21,7 +22,7 @@ function validateToken(req, res, next) {
   }
 }
 
-// Endpoint para enviar a tu canal
+// Endpoint para enviar MENSAJES DE TEXTO
 app.post("/send-message", validateToken, async (req, res) => {
   const { message, channel } = req.body;
   if (!message) {
@@ -29,7 +30,6 @@ app.post("/send-message", validateToken, async (req, res) => {
   }
 
   try {
-    // Usamos el channelId fijo desde env
     const channelId = channel;
     const sentMsg = await client.sendMessage(channelId, message);
 
@@ -43,23 +43,32 @@ app.post("/send-message", validateToken, async (req, res) => {
   }
 });
 
+// Endpoint para enviar IMÁGENES (CORREGIDO PARA BASE64)
 app.post("/send-media", validateToken, async (req, res) => {
 
-  try{
-    const { channel, mediaUrl, caption } = req.body;
+  try {
+    // Recibimos 'media' (el base64) en lugar de 'mediaUrl'
+    const { channel, media, caption } = req.body;
     
-    if (!channel || !mediaUrl) {
-      return res.status(400).json({ error: "Faltan parámetros: number o imageUrl" });
+    if (!channel || !media) {
+      return res.status(400).json({ error: "Faltan parámetros: channel o media" });
     }
     
-    const media = await MessageMedia.fromUrl(mediaUrl, { unsafeMime: true });
+    // Limpiamos el base64 si trae la cabecera "data:image/..."
+    const partes = media.split(',');
+    const base64Data = partes.length > 1 ? partes[1] : partes[0];
     
-    await client.sendMessage(channel, media, { caption });
+    // Creamos la imagen directamente desde el código (sin descargar nada)
+    const mediaObject = new MessageMedia('image/jpeg', base64Data, 'imagen.jpg');
+    
+    // Enviamos
+    await client.sendMessage(channel, mediaObject, { caption: caption || "" });
 
     res.json({ status: "ok", message: "Media enviada con éxito" });
-  } catch (error){
+
+  } catch (error) {
     console.error("Error enviando imagen:", error);
-    res.status(500).json({ error: "Error enviando imagen" });
+    res.status(500).json({ error: "Error enviando imagen: " + error.message });
   }
 
 });
