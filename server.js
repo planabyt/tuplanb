@@ -7,7 +7,7 @@ require("dotenv").config();
 
 const app = express();
 
-// Aumentamos el límite de tamaño para aceptar fotos grandes (IMPORTANTE)
+// Aumentamos el límite de tamaño para aceptar fotos grandes
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -22,7 +22,7 @@ function validateToken(req, res, next) {
   }
 }
 
-// Endpoint para enviar MENSAJES DE TEXTO
+// Endpoint para enviar a tu canal (MENSAJES)
 app.post("/send-message", validateToken, async (req, res) => {
   const { message, channel } = req.body;
   if (!message) {
@@ -43,22 +43,22 @@ app.post("/send-message", validateToken, async (req, res) => {
   }
 });
 
-// Endpoint para enviar IMÁGENES (CORREGIDO PARA BASE64)
+// Endpoint para enviar a tu canal (IMÁGENES - CORREGIDO)
 app.post("/send-media", validateToken, async (req, res) => {
 
   try {
-    // Recibimos 'media' (el base64) en lugar de 'mediaUrl'
+    // Recibimos 'media' (el base64) y 'channel'
     const { channel, media, caption } = req.body;
     
     if (!channel || !media) {
       return res.status(400).json({ error: "Faltan parámetros: channel o media" });
     }
     
-    // Limpiamos el base64 si trae la cabecera "data:image/..."
+    // Limpiamos el base64 si trae cabecera data:image...
     const partes = media.split(',');
     const base64Data = partes.length > 1 ? partes[1] : partes[0];
     
-    // Creamos la imagen directamente desde el código (sin descargar nada)
+    // Creamos la imagen directamente desde el código
     const mediaObject = new MessageMedia('image/jpeg', base64Data, 'imagen.jpg');
     
     // Enviamos
