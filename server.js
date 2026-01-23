@@ -1,76 +1,42 @@
-// server.js
-const express = require("express");
-const client = require("./main");
-const {MessageMedia} = require("whatsapp-web.js")
+// Necesitamos 'fs' para escribir archivos
+const fs = require('fs');
+const path = require('path');
 
-require("dotenv").config();
+// ... (resto del código igual) ...
 
-const app = express();
-
-// Aumentamos el límite de tamaño para aceptar fotos grandes
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
-
-
-// Middleware de validación
-function validateToken(req, res, next) {
-  const token = req.headers["x-api-key"];
-  if (token && token === process.env.N8N_TOKEN) {
-    next();
-  } else {
-    res.status(401).json({ error: "Unauthorized" });
-  }
-}
-
-// Endpoint para enviar a tu canal (MENSAJES)
-app.post("/send-message", validateToken, async (req, res) => {
-  const { message, channel } = req.body;
-  if (!message) {
-    return res.status(400).json({ error: "message requerido" });
-  }
-
-  try {
-    const channelId = channel;
-    const sentMsg = await client.sendMessage(channelId, message);
-
-    res.json({
-      status: "ok",
-      id: sentMsg.id.id,
-      message: sentMsg.body,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Endpoint para enviar a tu canal (IMÁGENES - CORREGIDO)
+// Endpoint para enviar IMÁGENES (Versión Fichero Temporal)
 app.post("/send-media", validateToken, async (req, res) => {
-
   try {
-    // Recibimos 'media' (el base64) y 'channel'
     const { channel, media, caption } = req.body;
     
     if (!channel || !media) {
-      return res.status(400).json({ error: "Faltan parámetros: channel o media" });
+      return res.status(400).json({ error: "Faltan parámetros" });
     }
-    
-    // Limpiamos el base64 si trae cabecera data:image...
+
+    // Limpiamos base64
     const partes = media.split(',');
     const base64Data = partes.length > 1 ? partes[1] : partes[0];
     
-    // Creamos la imagen directamente desde el código
-    const mediaObject = new MessageMedia('image/jpeg', base64Data, 'imagen.jpg');
+    // Creamos un nombre de archivo único
+    const fileName = `temp_${Date.now()}.jpg`;
+    const filePath = path.join(__dirname, fileName);
+
+    // Guardamos la imagen en el disco del servidor
+    fs.writeFileSync(filePath, base64Data, 'base64');
+
+    // Le decimos a WhatsApp: "Toma este archivo del disco"
+    const mediaObject = MessageMedia.fromFilePath(filePath);
     
     // Enviamos
     await client.sendMessage(channel, mediaObject, { caption: caption || "" });
 
-    res.json({ status: "ok", message: "Media enviada con éxito" });
+    // Borramos el archivo temporal
+    fs.unlinkSync(filePath);
+
+    res.json({ status: "ok", message: "Media enviada" });
 
   } catch (error) {
     console.error("Error enviando imagen:", error);
-    res.status(500).json({ error: "Error enviando imagen: " + error.message });
+    res.status(500).json({ error: "Error: " + error.message });
   }
-
 });
-
-module.exports = app;
