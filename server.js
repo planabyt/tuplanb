@@ -2,15 +2,12 @@
 const express = require("express");
 const client = require("./main");
 const {MessageMedia} = require("whatsapp-web.js");
-const fs = require('fs'); // Necesario para la estrategia temporal
-const path = require('path');
 
 require("dotenv").config();
 
-// AQUÍ SE CREA LA APP (Esta es la línea que te falta o está mal puesta)
 const app = express();
 
-// Aumentamos el límite de tamaño para aceptar fotos grandes
+// Límite 50mb para fotos grandes
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -25,7 +22,7 @@ function validateToken(req, res, next) {
   }
 }
 
-// Endpoint para enviar a tu canal (MENSAJES)
+// Endpoint para enviar MENSAJES (Texto)
 app.post("/send-message", validateToken, async (req, res) => {
   const { message, channel } = req.body;
   if (!message) {
@@ -35,57 +32,50 @@ app.post("/send-message", validateToken, async (req, res) => {
   try {
     const channelId = channel;
     const sentMsg = await client.sendMessage(channelId, message);
-
-    res.json({
-      status: "ok",
-      id: sentMsg.id.id,
-      message: sentMsg.body,
-    });
+    res.json({ status: "ok", id: sentMsg.id.id, message: sentMsg.body });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Endpoint para enviar a tu canal (IMÁGENES - ESTRATEGIA TEMPORAL)
+// Endpoint para enviar IMÁGENES (CORREGIDO Y LIMPIO)
 app.post("/send-media", validateToken, async (req, res) => {
 
   try {
-    // Recibimos 'media' (el base64) y 'channel'
     const { channel, media, caption } = req.body;
     
     if (!channel || !media) {
       return res.status(400).json({ error: "Faltan parámetros: channel o media" });
     }
     
-    // Limpiamos el base64 si trae cabecera data:image...
-    const partes = media.split(',');
-    const base64Data = partes.length > 1 ? partes[1] : partes[0];
+    console.log("Procesando imagen para:", channel);
+
+    // 1. LIMPIEZA DEL BASE64
+    // Separamos la cabecera "data:image/..." si existe
+    let base64Data = media;
+    if (media.includes(',')) {
+        base64Data = media.split(',')[1];
+    }
     
-    // --- ESTRATEGIA ARCHIVO TEMPORAL ---
-    const fileName = `temp_${Date.now()}.jpg`;
-    const filePath = path.join(__dirname, fileName);
+    // ¡ESTA ES LA CLAVE! Quitamos espacios y saltos de línea que rompen WhatsApp
+    base64Data = base64Data.replace(/\s/g, '');
 
-    // Guardamos la imagen en el disco del servidor
-    fs.writeFileSync(filePath, base64Data, 'base64');
-
-    // Le decimos a WhatsApp: "Toma este archivo del disco"
-    const mediaObject = MessageMedia.fromFilePath(filePath);
+    // 2. Creamos la imagen en memoria directamente
+    // Forzamos mimetype image/jpeg que es el que mejor traga WhatsApp
+    const mediaObject = new MessageMedia('image/jpeg', base64Data, 'noticia.jpg');
     
-    // Enviamos
-    await client.sendMessage(channel, mediaObject, { caption: caption || "" });
+    // 3. Enviamos
+    await client.sendMessage(channel, mediaObject, { 
+        caption: caption || "" 
+    });
 
-    // Borramos el archivo temporal
-    fs.unlinkSync(filePath);
-    // -----------------------------------
-
+    console.log("Imagen enviada con éxito");
     res.json({ status: "ok", message: "Media enviada con éxito" });
 
   } catch (error) {
     console.error("Error enviando imagen:", error);
-    // Intentamos borrar el fichero si falló
-    try { if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (e) {} 
-    
-    res.status(500).json({ error: "Error enviando imagen: " + error.message });
+    // Devolvemos el error exacto para verlo en N8N
+    res.status(500).json({ error: "Error interno: " + error.message });
   }
 
 });
