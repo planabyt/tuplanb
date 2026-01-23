@@ -6,7 +6,10 @@ const {MessageMedia} = require("whatsapp-web.js")
 require("dotenv").config();
 
 const app = express();
-app.use(express.json());
+// Aumentamos el límite de tamaño para aceptar fotos grandes
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
 
 // Middleware de validación
 function validateToken(req, res, next) {
