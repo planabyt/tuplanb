@@ -1,16 +1,15 @@
 // server.js
 const express = require("express");
 const client = require("./main");
-const {MessageMedia} = require("whatsapp-web.js");
+const { MessageMedia } = require("whatsapp-web.js");
 
 require("dotenv").config();
 
 const app = express();
 
 // Límite 50mb para fotos grandes
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
-
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Middleware de validación
 function validateToken(req, res, next) {
@@ -38,46 +37,51 @@ app.post("/send-message", validateToken, async (req, res) => {
   }
 });
 
-// Endpoint para enviar IMÁGENES (CORREGIDO Y LIMPIO)
+// Endpoint para enviar IMÁGENES (por URL o por Base64)
 app.post("/send-media", validateToken, async (req, res) => {
-
   try {
-    const { channel, media, caption } = req.body;
-    
-    if (!channel || !media) {
-      return res.status(400).json({ error: "Faltan parámetros: channel o media" });
+    const { channel, mediaUrl, media, caption } = req.body;
+
+    if (!channel || (!mediaUrl && !media)) {
+      return res
+        .status(400)
+        .json({ error: "Faltan parámetros: channel y (mediaUrl o media)" });
     }
-    
+
     console.log("Procesando imagen para:", channel);
 
-    // 1. LIMPIEZA DEL BASE64
-    // Separamos la cabecera "data:image/..." si existe
-    let base64Data = media;
-    if (media.includes(',')) {
-        base64Data = media.split(',')[1];
-    }
-    
-    // ¡ESTA ES LA CLAVE! Quitamos espacios y saltos de línea que rompen WhatsApp
-    base64Data = base64Data.replace(/\s/g, '');
+    let mediaObject;
 
-    // 2. Creamos la imagen en memoria directamente
-    // Forzamos mimetype image/jpeg que es el que mejor traga WhatsApp
-    const mediaObject = new MessageMedia('image/jpeg', base64Data, 'noticia.jpg');
-    
-    // 3. Enviamos
-    await client.sendMessage(channel, mediaObject, { 
-        caption: caption || "" 
+    // 1) Preferimos URL (más estable desde n8n)
+    if (mediaUrl) {
+      mediaObject = await MessageMedia.fromUrl(mediaUrl);
+    } else {
+      // 2) Base64 (tu método anterior)
+      let base64Data = media;
+
+      if (typeof base64Data !== "string") {
+        return res.status(400).json({ error: "media debe ser string base64" });
+      }
+
+      if (base64Data.includes(",")) {
+        base64Data = base64Data.split(",")[1];
+      }
+
+      base64Data = base64Data.replace(/\s/g, "");
+
+      mediaObject = new MessageMedia("image/jpeg", base64Data, "noticia.jpg");
+    }
+
+    await client.sendMessage(channel, mediaObject, {
+      caption: caption || "",
     });
 
     console.log("Imagen enviada con éxito");
     res.json({ status: "ok", message: "Media enviada con éxito" });
-
   } catch (error) {
     console.error("Error enviando imagen:", error);
-    // Devolvemos el error exacto para verlo en N8N
-    res.status(500).json({ error: "Error interno: " + error.message });
+    res.status(500).json({ error: "Error interno: " + (error?.message || error) });
   }
-
 });
 
 module.exports = app;
