@@ -37,15 +37,26 @@ app.post("/send-message", validateToken, async (req, res) => {
   }
 });
 
-// Endpoint para enviar IMÁGENES (por URL o por Base64)
+// Endpoint para enviar IMÁGENES (por URL) - estable
 app.post("/send-media", validateToken, async (req, res) => {
   try {
-    const { channel, mediaUrl, media, caption } = req.body;
+    const { channel, mediaUrl, caption } = req.body;
 
-    if (!channel || (!mediaUrl && !media)) {
-      return res
-        .status(400)
-        .json({ error: "Faltan parámetros: channel y (mediaUrl o media)" });
+    if (!channel || !mediaUrl) {
+      return res.status(400).json({ error: "Faltan parámetros: channel o mediaUrl" });
+    }
+
+    console.log("Procesando imagen para:", channel, "url:", mediaUrl);
+
+    const mediaObject = await MessageMedia.fromUrl(mediaUrl);
+    await client.sendMessage(channel, mediaObject, { caption: caption || "" });
+
+    res.json({ status: "ok", message: "Media enviada con éxito" });
+  } catch (error) {
+    console.error("Error enviando imagen:", error);
+    res.status(500).json({ error: "Error interno: " + (error?.message || error) });
+  }
+});
     }
 
     console.log("Procesando imagen para:", channel);
