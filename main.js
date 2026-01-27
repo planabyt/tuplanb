@@ -7,13 +7,12 @@ const client = new Client({
     dataPath: '/sessions', // Directory for storing sessions
   }),
   puppeteer: {
-    headless: true, // Aseguramos que corra sin interfaz gráfica
-    // Aumentamos el tiempo de espera interno a 5 minutos (evita el error Runtime.callFunctionOn timed out)
+    headless: true,
+    // ESTA ES LA LÍNEA QUE ARREGLA EL ERROR:
     protocolTimeout: 300000, 
     args: [
       '--no-sandbox', 
       '--disable-setuid-sandbox',
-      // Estos flags ayudan mucho a la estabilidad en Docker/Dokploy
       '--disable-dev-shm-usage',
       '--disable-accelerated-2d-canvas',
       '--no-first-run',
@@ -31,19 +30,17 @@ client.on("qr", (qr) => {
 client.on("ready", async () => {
   console.log("✅ WhatsApp client listo");
   
-  // Listar canales para debug (opcional, puedes comentarlo si ya tienes el ID)
+  // Listar canales para debug
   try {
      console.log("Canales disponibles:");
-     // console.log(await client.getChannels()); // Descomenta si necesitas ver IDs de nuevo
+     console.log(await client.getChannels()); 
   } catch (e) {
-     console.log("Error listando canales (no crítico):", e.message);
+     console.log("Error listando canales:", e.message);
   }
 });
 
-// Manejo básico de errores para evitar crash total
 client.on("disconnected", (reason) => {
     console.log("Cliente desconectado:", reason);
-    // Opcional: client.initialize(); // Si quieres que intente reconectar solo
 });
 
 client.initialize();
