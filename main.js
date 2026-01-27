@@ -8,7 +8,7 @@ const client = new Client({
   }),
   puppeteer: {
     headless: true,
-    // ESTA ES LA LÍNEA QUE ARREGLA EL ERROR:
+    // ESTA LÍNEA ES IMPRESCINDIBLE PARA ARREGLAR TU ERROR:
     protocolTimeout: 300000, 
     args: [
       '--no-sandbox', 
@@ -30,7 +30,6 @@ client.on("qr", (qr) => {
 client.on("ready", async () => {
   console.log("✅ WhatsApp client listo");
   
-  // Listar canales para debug
   try {
      console.log("Canales disponibles:");
      console.log(await client.getChannels()); 
