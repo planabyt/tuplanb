@@ -1,14 +1,13 @@
-// main.js
+// main.js - VERSIÓN FINAL ESTABLE
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const qrcode = require("qrcode-terminal");
 
 const client = new Client({
   authStrategy: new LocalAuth({
-    dataPath: '/sessions', // Directory for storing sessions
+    dataPath: '/sessions_clean', // <--- USAMOS CARPETA NUEVA PARA EVITAR ERRORES
   }),
   puppeteer: {
     headless: true,
-    // ESTA LÍNEA ES IMPRESCINDIBLE PARA ARREGLAR TU ERROR:
     protocolTimeout: 300000, 
     args: [
       '--no-sandbox', 
@@ -17,6 +16,7 @@ const client = new Client({
       '--disable-accelerated-2d-canvas',
       '--no-first-run',
       '--no-zygote',
+      '--single-process', // <--- IMPORTANTE PARA EVITAR BLOQUEOS
       '--disable-gpu'
     ],
   },
@@ -45,3 +45,9 @@ client.on("disconnected", (reason) => {
 client.initialize();
 
 module.exports = client;
+
+// Reinicio automático cada 24 horas para evitar memory leak
+setInterval(() => {
+  console.log("🔄 Reiniciando cliente para evitar memory leak...");
+  process.exit(0); // Dokploy lo reiniciará automáticamente
+}, 24 * 60 * 60 * 1000); // 24 horas
