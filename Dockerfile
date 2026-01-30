@@ -1,38 +1,19 @@
-FROM node:18-bullseye-slim
+FROM ghcr.io/puppeteer/puppeteer:21.5.2
 
-# Instalar Chrome y dependencias del sistema necesarias
-RUN apt-get update && apt-get install -y \
-    chromium \
-    libnss3 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxfixes3 \
-    librandr2 \
-    libgbm1 \
-    libasound2 \
-    fonts-liberation \
-    libxss1 \
-    lsb-release \
-    xdg-utils \
-    wget \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
-
-# Configurar variables de entorno para usar el Chrome instalado
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+USER root
 
 WORKDIR /usr/src/app
 
 COPY package*.json ./
-RUN npm install
+# Instalamos dependencias
+RUN npm install --ignore-scripts
 
 COPY . .
+
+# Permisos
+RUN chown -R pptruser:pptruser /usr/src/app
+
+USER pptruser
 
 EXPOSE 3000
 
