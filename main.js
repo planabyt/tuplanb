@@ -4,7 +4,7 @@ const qrcode = require("qrcode-terminal");
 
 const client = new Client({
   authStrategy: new LocalAuth({
-    dataPath: '/sessions_clean', // <--- USAMOS CARPETA NUEVA PARA EVITAR ERRORES
+    dataPath: './sessions_clean', // <--- USAMOS CARPETA NUEVA PARA EVITAR ERRORES
   }),
   puppeteer: {
     headless: true,
