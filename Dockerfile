@@ -1,27 +1,39 @@
-FROM ghcr.io/puppeteer/puppeteer:latest
+FROM node:18-bullseye-slim
+
+# Instalar Chrome y dependencias del sistema necesarias
+RUN apt-get update && apt-get install -y \
+    chromium \
+    libnss3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    librandr2 \
+    libgbm1 \
+    libasound2 \
+    fonts-liberation \
+    libxss1 \
+    lsb-release \
+    xdg-utils \
+    wget \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configurar variables de entorno para usar el Chrome instalado
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /usr/src/app
 
-# Copia los archivos de dependencias
 COPY package*.json ./
+RUN npm install
 
-# Da permisos al usuario pptruser sobre la carpeta de trabajo
-USER root
-RUN mkdir -p /usr/src/app/.wwebjs_auth /usr/src/app/.wwebjs_cache \
-  && chown -R pptruser:pptruser /usr/src/app
-
-# Asegura que el directorio /sessions exista y tiene los permisos correctos
-RUN mkdir -p /sessions && chown -R pptruser:pptruser /sessions
-
-# Cambia al usuario recomendado por la imagen base
-USER pptruser
-
-# Instala solo dependencias de producción (usa --omit=dev en vez de --production)
-RUN npm install --omit=dev
-
-# Copia el resto del código fuente
 COPY . .
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+CMD [ "node", "index.js" ]
