@@ -1,4 +1,4 @@
-// main.js
+// main.js - CORREGIDO
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const qrcode = require("qrcode-terminal");
 
@@ -8,7 +8,7 @@ const client = new Client({
   }),
   puppeteer: {
     headless: true,
-    // NO ponemos executablePath, la imagen de Docker ya sabe dónde está
+    executablePath: '/usr/bin/google-chrome-stable', // <--- RUTA OBLIGATORIA EN IMAGEN OFICIAL
     protocolTimeout: 300000, 
     args: [
       '--no-sandbox', 
