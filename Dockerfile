@@ -1,19 +1,23 @@
-FROM ghcr.io/puppeteer/puppeteer:21.5.2
+FROM node:18-bullseye-slim
 
-USER root
+# Instalar Chromium y dependencias
+RUN apt-get update \
+    && apt-get install -y wget gnupg \
+    && apt-get install -y chromium \
+    && apt-get install -y fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+# Variables para que Puppeteer use este Chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /usr/src/app
 
 COPY package*.json ./
-# Instalamos dependencias
-RUN npm install --ignore-scripts
+RUN npm install
 
 COPY . .
-
-# Permisos
-RUN chown -R pptruser:pptruser /usr/src/app
-
-USER pptruser
 
 EXPOSE 3000
 
