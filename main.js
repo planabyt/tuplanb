@@ -1,4 +1,4 @@
-// main.js - CORREGIDO
+// main.js - VERSIÓN LEGACY ESTABLE
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const qrcode = require("qrcode-terminal");
 
@@ -8,7 +8,8 @@ const client = new Client({
   }),
   puppeteer: {
     headless: true,
-    executablePath: '/usr/bin/google-chrome-stable', // <--- RUTA OBLIGATORIA EN IMAGEN OFICIAL
+    executablePath: '/usr/bin/chromium', // <--- Ruta correcta para Debian Bullseye
+    ignoreHTTPSErrors: true, // <--- Importante para evitar cuelgues de red
     protocolTimeout: 300000, 
     args: [
       '--no-sandbox', 
@@ -30,12 +31,10 @@ client.on("qr", (qr) => {
 
 client.on("ready", async () => {
   console.log("✅ WhatsApp client listo");
-  
   try {
-     console.log("Canales disponibles:");
      console.log(await client.getChannels()); 
   } catch (e) {
-     console.log("Error listando canales:", e.message);
+     console.log("Error canales:", e.message);
   }
 });
 
@@ -47,8 +46,7 @@ client.initialize();
 
 module.exports = client;
 
-// Reinicio automático diario
+// Reinicio automático
 setInterval(() => {
-  console.log("🔄 Reiniciando...");
   process.exit(0);
 }, 24 * 60 * 60 * 1000);
