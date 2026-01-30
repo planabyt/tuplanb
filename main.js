@@ -1,14 +1,14 @@
-// main.js - VERSIÓN FINAL PARA DOCKER OPTIMIZADO
+// main.js
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const qrcode = require("qrcode-terminal");
 
 const client = new Client({
   authStrategy: new LocalAuth({
-    dataPath: './sessions_clean', // Carpeta local para evitar problemas de permisos
+    dataPath: './sessions_clean', 
   }),
   puppeteer: {
     headless: true,
-    executablePath: '/usr/bin/chromium', // <--- IMPORTANTE: Usa el Chrome del sistema
+    // NO ponemos executablePath, la imagen de Docker ya sabe dónde está
     protocolTimeout: 300000, 
     args: [
       '--no-sandbox', 
@@ -47,8 +47,8 @@ client.initialize();
 
 module.exports = client;
 
-// Reinicio automático cada 24 horas para evitar memory leak
+// Reinicio automático diario
 setInterval(() => {
-  console.log("🔄 Reiniciando cliente para evitar memory leak...");
-  process.exit(0); // Dokploy lo reiniciará automáticamente
-}, 24 * 60 * 60 * 1000); 
+  console.log("🔄 Reiniciando...");
+  process.exit(0);
+}, 24 * 60 * 60 * 1000);
